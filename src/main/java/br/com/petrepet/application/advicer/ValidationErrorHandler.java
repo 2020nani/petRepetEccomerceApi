@@ -1,6 +1,5 @@
 package br.com.petrepet.application.advicer;
 
-import br.com.docesdalu.core.pedido.PedidoNotFoundException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,17 +77,6 @@ public class ValidationErrorHandler {
     public FieldErrorOutputDto handleValidationError(IllegalArgumentException exception) {
 
         return new FieldErrorOutputDto(exception.getMessage());
-    }
-
-    @ExceptionHandler(PedidoNotFoundException.class)
-    public ResponseEntity<ErroNegocioDto> teste(PedidoNotFoundException pedidoNotFoundException){
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErroNegocioDto(
-                pedidoNotFoundException.getMessage(),
-                HttpStatus.BAD_REQUEST,
-                new Date(),
-                pedidoNotFoundException.getCause().getMessage()));
     }
 
 
