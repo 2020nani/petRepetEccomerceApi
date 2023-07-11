@@ -1,0 +1,120 @@
+version: '3'
+
+services:
+
+  api-petrepet:
+    container_name: petrepet
+    build:
+      context: .
+      dockerfile: dockerfile
+    ports:
+      - '8080:8080'
+    depends_on:
+      - rabbitmq-petrepet
+      - elasticsearch-petrepet
+      - mongo
+    environment:
+      RABBIT_HOST: "172.18.0.7"
+      RABBIT_PORT: 5672
+      RABBIT_USER: admin
+      RABBIT_PASS: 123456
+      ELASTICSEARCH_HOST: 172.18.0.3:9200
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongo:27017/petrepet
+
+  rabbitmq-petrepet:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-petrepet
+    restart: always
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbitmq-volume:/var/lib/rabbitmq/
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=123456
+
+  elasticsearch-petrepet:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.3.1
+    container_name: elasticsearch-petrepet
+    environment:
+      - node.name=ws-es-node
+      - discovery.type=single-node
+      - cluster.name=ws-es-data-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+      # - xpack.security.enabled='false'
+      # - xpack.monitoring.enabled='false'
+      # - xpack.watcher.enabled='false'
+      # - xpack.ml.enabled='false'
+      # - http.cors.enabled='true'
+      # - http.cors.allow-origin="*"
+      # - http.cors.allow-methods=OPTIONS, HEAD, GET, POST, PUT, DELETE
+      # - http.cors.allow-headers=X-Requested-With,X-Auth-Token,Content-Type, Content-Length
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - vibhuviesdata:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+
+  kibana-petrepet:
+    image: docker.elastic.co/kibana/kibana:7.3.1
+    container_name: kibana-petrepet
+    environment:
+      SERVER_NAME: 127.0.0.1
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      # XPACK_GRAPH_ENABLED: false
+      # XPACK_ML_ENABLED: false
+      # XPACK_REPORTING_ENABLED: false
+      # XPACK_SECURITY_ENABLED: false
+      # XPACK_WATCHER_ENABLED: false
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch-petrepet
+    restart: "unless-stopped"
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+  mongo-express:
+    image: mongo-express
+    restart: always
+    depends_on:
+      - mongo
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: example
+      ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017/
+
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=fakeAccessKeyId
+      - AWS_SECRET_ACCESS_KEY=fakeSecretAccessKey
+      - EDGE_PORT=4566
+      - SERVICES=lambda,s3,ec2,ecs
+    ports:
+      - '4566-4583:4566-4583'
+    volumes:
+      - tmp-dir:/tmp/localstack
+      - localstackV:/var/run/docker.sock
+
+volumes:
+  vibhuviesdata:
+  rabbitmq-volume:
+  tmp-dir:
+  localstackV:
+    driver: local
